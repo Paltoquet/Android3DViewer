@@ -94,7 +94,7 @@ public class Build implements BuilderInterface {
             // >     vertex numbers. Negative values indicate relative vertex numbers.
 
             FaceVertex fv = new FaceVertex();
-            log.log(INFO,"Adding vertex g=" + vertexIndices[loopi] + " t=" + vertexIndices[loopi + 1] + " n=" + vertexIndices[loopi + 2]);
+            //log.log(INFO,"Adding vertex g=" + vertexIndices[loopi] + " t=" + vertexIndices[loopi + 1] + " n=" + vertexIndices[loopi + 2]);
             int vertexIndex;
             int indice = vertexIndices[loopi]-1;
             vertexIndex = vertexIndices[loopi++];
@@ -161,8 +161,7 @@ public class Build implements BuilderInterface {
             } else {
                 fv = fv2;
             }
-            fv.index = indice;
-            Log.d("putain",String.valueOf(fv.index));
+            //fv.index = indice;
             face.add(fv);
         }
 //        log.log(INFO,"Parsed face=" + face);
@@ -501,6 +500,16 @@ public class Build implements BuilderInterface {
             vertices[i*3+2] = v.z;
         }
         return vertices;
+    }
+
+    public float[] getTextureCoordinates(){
+        float[] texturesCoordinates = new float[verticesT.size()*2];
+        for(int i=0; i<verticesT.size(); i++){
+            VertexTexture v = verticesT.get(i);
+            texturesCoordinates[i*2+0] = v.u;
+            texturesCoordinates[i*2+1] = v.v;
+        }
+        return texturesCoordinates;
     }
 
     public short[] getIndices(){

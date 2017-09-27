@@ -33,4 +33,24 @@ public class Shader {
             "void main() {" +
             "  gl_FragColor = vColor;" +
             "}";
+
+    public  static  final String textureVertexShader =
+            "attribute vec3 vPosition;" +
+            "attribute vec2 vTexCoordinate;" +
+            "uniform mat4 MVPMatrix;" +
+            "uniform vec4 vColor;" +
+            "varying vec2 fTexCoordinate;" +
+            "void main() {" +
+            "  gl_Position = MVPMatrix * vec4(vPosition,1);" +
+            "  fTexCoordinate = vTexCoordinate;" +
+            "}";
+
+    public static final String textureFragmentShader =
+            "precision mediump float;" +
+            "uniform sampler2D fTexture;" +
+            "varying vec2 fTexCoordinate;" +
+            "uniform vec4 vColor;" +
+            "void main() {" +
+            "  gl_FragColor = texture2D(fTexture, fTexCoordinate);" +
+            "}";
 }

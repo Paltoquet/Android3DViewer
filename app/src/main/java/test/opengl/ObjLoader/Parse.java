@@ -72,7 +72,7 @@ public class Parse {
     //File objFile = null;
     private int m_ressourceId;
 
-    public Parse(Context context,BuilderInterface builder, int ressourceId) throws FileNotFoundException, IOException {
+    public Parse(Context context, BuilderInterface builder, int ressourceId) throws FileNotFoundException, IOException {
         this.builder = builder;
         this.m_context = context;
         this.m_ressourceId = ressourceId;

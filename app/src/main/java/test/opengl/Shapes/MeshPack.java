@@ -1,7 +1,10 @@
 package test.opengl.Shapes;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
+import android.opengl.GLUtils;
 import android.util.Log;
 
 import java.io.IOException;
@@ -12,41 +15,34 @@ import java.nio.ShortBuffer;
 
 import test.opengl.ObjLoader.Build;
 import test.opengl.ObjLoader.Parse;
-import test.opengl.R;
 import test.opengl.Utils.Config;
 import test.opengl.Utils.VBO;
 
 /**
- * Created by user on 21/09/2017.
+ * Created by user on 23/09/2017.
  */
-public class Mesh {
+public class MeshPack{
 
-    static final int COORDS_PER_VERTEX = 3;
-    private final int vertexStride = COORDS_PER_VERTEX * Config.BYTE_PER_FLOAT; // 4 bytes per vertex
-
-
-    protected float[] m_vertices;
-    protected short[] m_indices;
-    protected VBO m_vboData;
-
-    private float[] m_test = {
-            -0.5f,  0.5f, 0.0f,   // top left
-            -0.5f, -0.5f, 0.0f,   // bottom left
-            0.5f, -0.5f, 0.0f,   // bottom right
-            0.5f,  0.5f, 0.0f };
-
-    private short[] m_test2 = {
-            0, 1, 2, 0, 2, 3
-    };
+    static int COORDS_PER_VERTEX = VBO.STRIDE ;
+    private int vertexStride = COORDS_PER_VERTEX * Config.BYTE_PER_FLOAT; // 4 bytes per vertex
 
     protected FloatBuffer m_vertexBuffer;
     protected ShortBuffer m_indexBuffer;
 
     protected int[] m_vbo = new int[1];
     protected int[] m_ibo = new int[1];
+
+    protected VBO m_vboData;
+    protected float[] m_vertices;
+    protected short[] m_indices;
+    protected float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 1.0f };
+
     protected int m_MVPHandle;
     protected int m_PositionHandle;
+    protected int m_textureCoordinateHandle;
     protected int m_ColorHandle;
+    protected int   m_textureUniformHandle;
+    protected int[] m_textureHandle  = new int[1];
 
     protected int floatCount;
     protected int indexCount;
@@ -55,22 +51,39 @@ public class Mesh {
     protected Build m_build;
     protected Context m_context;
     protected int m_ressourceId;
-    // Set color with red, green, blue and alpha (opacity) values
-    protected float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 1.0f };
+    protected int m_ressourcesTextureId;
 
-    public Mesh(Context context, int ressourcesId) {
+    public MeshPack(Context context, int meshID, int textureID) {
 
         m_context = context;
-        m_ressourceId = ressourcesId;
+        m_ressourceId = meshID;
+        m_ressourcesTextureId = textureID;
         m_build = new Build();
         try {
-            m_parse = new Parse(context, m_build, ressourcesId);
+            m_parse = new Parse(context, m_build, meshID);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        m_vertices = m_build.getVertices();
+        m_vboData = new VBO(m_build.faceVerticeList);
         m_indices = m_build.getIndices();
+        m_vertices = m_vboData.vbo;
+        createBuffer();
+        createTexture();
+    }
+
+    public void draw(int program, float[] mvp) {
+        // get handle to vertex shader's vPosition member
+        Log.d("mesh test", "test " + String.valueOf(floatCount) + " short: " + String.valueOf(m_indices.length));
+
+        getHandle(program);
+        setUniform(mvp);
+        setBuffer();
+        drawElem();
+        exit();
+    }
+
+    protected void createBuffer(){
         floatCount = m_vertices.length;//m_build.verticesG.size() * COORDS_PER_VERTEX;
         indexCount = m_indices.length;
 
@@ -112,56 +125,64 @@ public class Mesh {
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
     }
 
-    public void draw(int program, float[] mvp) {
-        // get handle to vertex shader's vPosition member
+    protected void createTexture(){
 
-        Log.d("mesh", "test " + String.valueOf(floatCount) + " short: " + String.valueOf(m_indices.length));
+        GLES20.glGenTextures(1, m_textureHandle, 0);
 
-        getHandle(program);
-        setUniform(mvp);
-        setBuffer();
-        drawElem();
-        exit();
+        if (m_textureHandle[0] != 0)
+        {
+            final BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inScaled = false;   // No pre-scaling
 
-        /*m_MVPHandle = GLES20.glGetUniformLocation(program, "MVPMatrix");
-        m_PositionHandle = GLES20.glGetAttribLocation(program, "vPosition");
-        m_ColorHandle = GLES20.glGetUniformLocation(program, "vColor");
+            // Read in the resource
+            final Bitmap bitmap = BitmapFactory.decodeResource(m_context.getResources(), m_ressourcesTextureId, options);
 
-        GLES20.glUniformMatrix4fv(m_MVPHandle, 1, false, mvp, 0);
-        GLES20.glUniform4fv(m_ColorHandle, 1, color, 0);
+            // Bind to the texture in OpenGL
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, m_textureHandle[0]);
 
-        GLES20.glEnableVertexAttribArray(m_PositionHandle);
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, m_vbo[0]);
-        // Enable a handle to the triangle vertices
-        GLES20.glVertexAttribPointer(m_PositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT,
-                false, vertexStride, 0);
+            // Set filtering
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
 
-        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, m_ibo[0]);
-        //GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount);
-        GLES20.glDrawElements(GLES20.GL_TRIANGLES, indexCount, GLES20.GL_UNSIGNED_SHORT, 0);
+            // Load the bitmap into the bound texture.
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
 
-        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);*/
+            // Recycle the bitmap, since its data has been loaded into OpenGL.
+            bitmap.recycle();
+        }
 
+        if (m_textureHandle[0] == 0)
+        {
+            throw new RuntimeException("Error loading texture.");
+        }
     }
-
     protected void getHandle(int program){
         m_MVPHandle = GLES20.glGetUniformLocation(program, "MVPMatrix");
+        m_textureUniformHandle = GLES20.glGetUniformLocation(program, "fTexture");
         m_PositionHandle = GLES20.glGetAttribLocation(program, "vPosition");
+        m_textureCoordinateHandle = GLES20.glGetAttribLocation(program, "vTexCoordinate");
         m_ColorHandle = GLES20.glGetUniformLocation(program, "vColor");
     }
 
     protected void setUniform(float[] mvp){
         GLES20.glUniformMatrix4fv(m_MVPHandle, 1, false, mvp, 0);
         GLES20.glUniform4fv(m_ColorHandle, 1, color, 0);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, m_textureHandle[0]);
+        GLES20.glUniform1i(m_textureUniformHandle, 0);
     }
 
     protected void setBuffer(){
         GLES20.glEnableVertexAttribArray(m_PositionHandle);
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, m_vbo[0]);
         // Enable a handle to the triangle vertices
-        GLES20.glVertexAttribPointer(m_PositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT,
+        GLES20.glVertexAttribPointer(m_PositionHandle, 3, GLES20.GL_FLOAT,
                 false, vertexStride, 0);
+
+        GLES20.glEnableVertexAttribArray(m_textureCoordinateHandle);
+        // Enable a handle to the triangle vertices
+        GLES20.glVertexAttribPointer(m_textureCoordinateHandle, 2, GLES20.GL_FLOAT,
+                false, vertexStride, 3*Config.BYTE_PER_FLOAT);
 
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, m_ibo[0]);
     }

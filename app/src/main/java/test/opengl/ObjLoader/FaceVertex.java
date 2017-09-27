@@ -16,7 +16,7 @@ import java.io.IOException;
 
 public class FaceVertex {
 
-    int index = -1;
+    public int index = -1;
     public VertexGeometric v = null;
     public VertexTexture t = null;
     public VertexNormal n = null;
